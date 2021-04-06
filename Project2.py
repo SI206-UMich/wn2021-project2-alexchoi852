@@ -69,7 +69,7 @@ def get_book_summary(book_url):
     title_tag = soup.find('h1', class_='gr-h1 gr-h1--serif').text.strip("\n")
     author_tag = soup.find('a', class_='authorName')
     author = author_tag.find("span").text.strip("\n")
-    page_tag = soup.find('span', attrs={"itemprop":"numberOfPages"}).text.strip("/n")
+    page_tag = soup.find('span', attrs={"itemprop":"numberOfPages"}).text.strip("/n").strip(" pages")
     return (title_tag, author, page_tag)
 
 
@@ -86,14 +86,15 @@ def summarize_best_books(filepath):
     """
     f = open(filepath, "r")
     soup = BeautifulSoup(f.read(), features="lxml")
-    start = "https://www.goodreads.com/"
-    categories = soup.find("div", class_="category clearFix")
+    categories = soup.find_all("h4", class_="category__copy")
+    titles = soup.find_all("img", class_="category__winnerImage")
+    urls = soup.find_all("div", class_="category clearFix")
     tuple_list = []
-    for category in categories:
-        category_tag = soup.find("h4", class_="category__copy").text.strip("\n")
-        title_tag = soup.find("img").get("alt")
-        url_tag = start + soup.find("a").get("href")
-        tuple_list.append((category_tag, title_tag, url_tag))
+    for i in range(0, len(categories)):
+        category = categories[i].text.strip("\n")
+        title = titles[i].get("alt")
+        url = urls[i].find('a').get("href")
+        tuple_list.append((category, title, url))
     return tuple_list
 
 
@@ -122,7 +123,7 @@ def write_csv(data, filename):
         csv_writer = csv.writer(content)
         csv_writer.writerow("Book title,Author Name")
         for book in data:
-            csv_writer.writerow(data[0],data[1])   
+            csv_writer.writerow(book[0],book[1])   
 
 
 def extra_credit(filepath):
@@ -168,8 +169,9 @@ class TestCases(unittest.TestCase):
     def test_get_book_summary(self):
         # create a local variable – summaries – a list containing the results from get_book_summary()
         # for each URL in TestCases.search_urls (should be a list of tuples)
+        summaries = []
         for url in TestCases.search_urls:
-            summaries = get_book_summary(url)
+            summaries.append(get_book_summary(url))
         # check that the number of book summaries is correct (10)
         self.assertEqual(len(summaries), 10)
             # check that each item in the list is a tuple
@@ -178,7 +180,7 @@ class TestCases(unittest.TestCase):
             # check that each tuple has 3 elements
             self.assertTrue(len(tup), 3)
             # check that the first two elements in the tuple are string
-            self.assertIsInstance(tup[:2], string)
+            self.assertIsInstance(tup[:2], str)
             # check that the third element in the tuple, i.e. pages is an int
             self.assertIsInstance(tup[2], int)
             # check that the first book in the search has 337 pages
@@ -207,7 +209,7 @@ class TestCases(unittest.TestCase):
         # call write csv on the variable you saved and 'test.csv'
         csv_file = write_csv(write_info, 'test.csv')
         # read in the csv that you wrote (create a variable csv_lines - a list containing all the lines in the csv you just wrote to above)
-        csv_lines = csv_file.readlines()
+        csv_lines = open(csv_file, "r").readlines()
         # check that there are 21 lines in the csv
         self.assertEqual(len(csv_lines), 21)
         # check that the header row is correct
